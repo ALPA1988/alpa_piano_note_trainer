@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>88-Tasten Noten-, Intervall- und Akkord-Trainer</title>
+<style>
+  :root{--bg:#f7f7f5;--panel:#fff;--ink:#151515;--muted:#666;--line:#d8d8d2;--accent:#2f6fed;--ok:#168044;--bad:#b3261e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+  header,main{max-width:1320px;margin:auto;padding:20px 24px}
+  header{padding-bottom:6px}
+  h1{margin:0 0 6px;font-size:28px}
+  .sub{margin:0;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:minmax(360px,1fr)330px;gap:16px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 26px rgba(0,0,0,.05);padding:18px;margin-bottom:16px}
+  .staffwrap{display:flex;align-items:center;justify-content:center;min-height:310px}
+  svg{max-width:100%;height:auto}
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+  select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:white;font:inherit}
+  .controls{display:grid;gap:10px;align-content:start}
+  .range{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .check{display:flex;gap:8px;align-items:center;font-size:14px}
+  .check label{margin:0;color:var(--ink)}
+  button{border:0;border-radius:11px;padding:10px 13px;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer}
+  .secondary{background:#eee;color:var(--ink)}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .result{min-height:42px;font-weight:800;font-size:16px;line-height:1.25}
+  .ok{color:var(--ok)}
+  .bad{color:var(--bad)}
+  .big{font-size:25px;font-weight:900;line-height:1.2}
+  .hidden{display:none}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{background:#f6f6f3;border:1px solid var(--line);border-radius:12px;padding:10px}
+  .stat b{display:block;font-size:22px}
+  .stat span{font-size:12px;color:var(--muted)}
+  .hint{font-size:13px;color:var(--muted);line-height:1.35}
+  .kbdpanel{overflow-x:auto;padding-bottom:10px}
+  .keyboard{position:relative;height:214px;min-width:1248px;user-select:none;margin:auto}
+  .white{position:absolute;top:0;width:24px;height:190px;background:linear-gradient(#fff,#f6f6f1);border:1px solid #222;border-radius:0 0 5px 5px;z-index:1;cursor:pointer}
+  .white:hover{background:#eef4ff}
+  .black{position:absolute;top:0;width:15px;height:118px;background:linear-gradient(#333,#000);border:1px solid #000;border-radius:0 0 4px 4px;z-index:3;cursor:pointer}
+  .black:hover{background:#32486f}
+  .lab{position:absolute;bottom:8px;width:100%;text-align:center;font-size:10px;color:#777;pointer-events:none}
+  .black .lab{bottom:5px;color:#ddd;font-size:9px}
+  .target{outline:3px solid var(--accent);outline-offset:-4px}
+  .hitok{background:#dff5e8!important}
+  .hitbad{background:#ffe3e0!important}
+  .black.hitok{background:#168044!important}
+  .black.hitbad{background:#b3261e!important}
+  .midi{border:1px solid var(--line);border-radius:12px;padding:10px;background:#f8f8f5;display:grid;gap:8px}
+  .midi small{color:var(--muted);line-height:1.3}
+  .midiStatus{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>88-Tasten Noten-Trainer</h1>
+  <p class="sub">Einzelnoten, Intervalle und Akkorde am Notenblatt erkennen und auf der kompletten Klaviatur spielen.</p>
+</header>
+
+<main>
+  <section class="grid">
+    <div class="panel staffwrap">
+      <svg id="staff" width="760" height="300" viewBox="0 0 760 300" aria-label="Notensystem"></svg>
+    </div>
+
+    <aside class="panel controls">
+      <div>
+        <label>Übung</label>
+        <select id="exercise">
+          <option value="note" selected>Einzelnoten</option>
+          <option value="landmark">Landmark Notes: 9 Anker-Noten</option>
+          <option value="interval">Intervalle: Prime bis Oktave</option>
+          <option value="chord">Akkorde: Dur und Moll</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Darstellung</label>
+        <select id="clef">
+          <option value="grand" selected>Grand Staff / beide Schlüssel</option>
+          <option value="treble">Nur Violinschlüssel</option>
+          <option value="bass">Nur Bassschlüssel</option>
+        </select>
+      </div>
+
+      <div class="range">
+        <div><label>Tiefste Note</label><select id="low"></select></div>
+        <div><label>Höchste Note</label><select id="high"></select></div>
+      </div>
+
+      <div>
+        <label>Vorzeichen</label>
+        <select id="acc">
+          <option value="naturals" selected>Nur weiße Tasten</option>
+          <option value="sharps">Weiße Tasten + Kreuze</option>
+          <option value="flats">Weiße Tasten + Bs</option>
+          <option value="both">Alles gemischt</option>
+        </select>
+      </div>
+
+      <div class="check"><input type="checkbox" id="showName"><label for="showName">Notennamen zusätzlich anzeigen</label></div>
+      <div class="check"><input type="checkbox" id="showTarget"><label for="showTarget">Zieltasten nach Fehler zeigen</label></div>
+
+      <div class="row"><button id="next">Neue Aufgabe</button><button id="reset" class="secondary">Reset</button></div>
+
+      <div class="midi">
+        <div class="row"><button id="midiConnect" type="button">MIDI verbinden</button><button id="midiDisconnect" type="button" class="secondary">MIDI aus</button></div>
+        <div class="midiStatus" id="midiStatus">MIDI nicht verbunden.</div>
+        <small>In Chrome kannst du nach dem Verbinden direkt auf deinem Piano spielen. Bei Intervallen/Akkorden alle Zielnoten spielen.</small>
+      </div>
+
+      <div id="name" class="big hidden"></div>
+      <div id="result" class="result"></div>
+
+      <div class="stats">
+        <div class="stat"><b id="right">0</b><span>richtig</span></div>
+        <div class="stat"><b id="wrong">0</b><span>falsch</span></div>
+        <div class="stat"><b id="rate">0%</b><span>Quote</span></div>
+      </div>
+
+      <p class="hint">Tipp: Für Titanic zuerst <b>Einzelnoten</b>, <b>C3 bis C5</b>, <b>Grand Staff</b>, <b>nur weiße Tasten</b>. Danach Landmark Notes, dann Intervalle, dann Akkorde. Intervalle/Akkorde werden auf einem System so gesetzt, wie es notatorisch am sinnvollsten ist.</p>
+    </aside>
+  </section>
+
+  <section class="panel kbdpanel">
+    <div id="keyboard" class="keyboard"></div>
+    <p class="hint">Deutsche Namen: <b>H</b> = englisch B, <b>B</b> = englisch B♭. Bei Akkorden zählt die App die exakten Tasten/Oktaven, die im Notenbild stehen. Im Landmark-Modus kommen nur 9 klassische Anker-Noten dran.</p>
+  </section>
+</main>
+
+<script>
+const W=24,BW=15;
+const pcs=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const sharp=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','H'];
+const flat =['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B','H'];
+const whites=new Set([0,2,4,5,7,9,11]);
+const intervalNames=['Prime','Sekunde','Terz','Quarte','Quinte','Sexte','Septime','Oktave'];
+const whitePc=[0,2,4,5,7,9,11];
+
+let notes=[],cur=null,right=0,wrong=0,midi=null,midiOn=false;
+const $=id=>document.getElementById(id), kbd=$('keyboard'), staff=$('staff');
+
+function oct(m){return Math.floor(m/12)-1}
+function isWhite(m){return whites.has(m%12)}
+function nm(m,style='sharp'){return (style==='flat'?flat:sharp)[m%12]+oct(m)}
+function noteListName(ms,style='sharp'){return ms.map(m=>nm(m,style)).join(' – ')}
+function makeNotes(){let wi=0;for(let m=21;m<=108;m++){let white=isWhite(m),x=white?wi*W:wi*W-BW/2;notes.push({m,pc:m%12,oct:oct(m),white,x,wi});if(white)wi++}kbd.style.minWidth=52*W+'px'}
+function buildKeyboard(){kbd.innerHTML='';notes.filter(n=>n.white).forEach(n=>{let e=document.createElement('div');e.className='white';e.style.left=n.x+'px';e.dataset.midi=n.m;e.title=nm(n.m);if(n.pc===0||n.m===21||n.m===108){let l=document.createElement('div');l.className='lab';l.textContent=nm(n.m);e.appendChild(l)}e.onclick=()=>answer(n.m);kbd.appendChild(e)});notes.filter(n=>!n.white).forEach(n=>{let e=document.createElement('div');e.className='black';e.style.left=n.x+'px';e.dataset.midi=n.m;e.title=nm(n.m)+' / '+nm(n.m,'flat');e.onclick=()=>answer(n.m);kbd.appendChild(e)})}
+function fillRanges(){for(const n of notes){for(const id of ['low','high']){let o=document.createElement('option');o.value=n.m;o.textContent=nm(n.m,n.white?'sharp':'flat');$(id).appendChild(o)}}$('low').value=48;$('high').value=72}
+function range(){let lo=+$('low').value,hi=+$('high').value;if(lo>hi)[lo,hi]=[hi,lo];return{lo,hi}}
+function accAllows(m){return $('acc').value!=='naturals'||isWhite(m)}
+function spellingFor(m){let acc=$('acc').value;if(isWhite(m))return{style:'sharp',acc:''};if(acc==='flats')return{style:'flat',acc:'♭'};if(acc==='both'&&Math.random()<.5)return{style:'flat',acc:'♭'};return{style:'sharp',acc:'♯'}}
+function eligibleNotes(){let {lo,hi}=range();return notes.filter(n=>n.m>=lo&&n.m<=hi&&accAllows(n.m))}
+function byMidi(m){return notes.find(n=>n.m===m)}
+function midiFromDiatonic(idx){let octave=Math.floor(idx/7),letter=idx%7;return (octave+1)*12+whitePc[letter]}
+function dia(m,style){let pc=m%12,o=oct(m),letter;if(style==='flat'){letter={1:'D',3:'E',6:'G',8:'A',10:'B'}[pc]||pcs[pc][0]}else{letter={1:'C',3:'D',6:'F',8:'G',10:'A'}[pc]||pcs[pc][0]}return o*7+{C:0,D:1,E:2,F:3,G:4,A:5,B:6}[letter]}
+
+function makeSingleTask(){
+  let pool=eligibleNotes(); if(!pool.length)return null;
+  let n=pool[Math.floor(Math.random()*pool.length)], sp=spellingFor(n.m);
+  return {kind:'note',notes:[{...n,sp}],target:[n.m],played:new Set(),label:nm(n.m,sp.style),prompt:'Welche Taste ist das?',detail:'Einzelton'};
+}
+
+const landmarkDefs = [
+  {m:36, label:'Very Low C'},
+  {m:48, label:'Low C'},
+  {m:60, label:'Middle C'},
+  {m:72, label:'High C'},
+  {m:84, label:'Very High C'},
+  {m:53, label:'Low F'},
+  {m:65, label:'Bass F'},
+  {m:67, label:'Treble G'},
+  {m:79, label:'High G'}
+];
+
+function makeLandmarkTask(){
+  let {lo,hi}=range();
+  let pool = landmarkDefs.filter(d => d.m >= lo && d.m <= hi && accAllows(d.m));
+  if(!pool.length) return null;
+  let pick = pool[Math.floor(Math.random()*pool.length)];
+  let n = byMidi(pick.m), sp = spellingFor(pick.m);
+  return {
+    kind:'landmark',
+    notes:[{...n, sp}],
+    target:[pick.m],
+    played:new Set(),
+    label:pick.label,
+    prompt:'Landmark Note – spiele die Anker-Note',
+    detail:pick.label
+  };
+}
+
+function makeIntervalTask(){
+  let {lo,hi}=range(), candidates=[];
+  for(let root=lo;root<=hi;root++){
+    if(!isWhite(root)||!accAllows(root))continue;
+    for(let step=0;step<8;step++){
+      let target=midiFromDiatonic(dia(root,'sharp')+step);
+      if(target<21||target>108||target<lo||target>hi||!accAllows(target))continue;
+      candidates.push({root,target,step});
+    }
+  }
+  if(!candidates.length)return null;
+  let c=candidates[Math.floor(Math.random()*candidates.length)];
+  let ms=[c.root]; if(c.target!==c.root)ms.push(c.target);
+  let ns=ms.map(m=>({...byMidi(m),sp:spellingFor(m)}));
+  let style=ns[0].sp.style;
+  let label=intervalNames[c.step];
+  return {kind:'interval',notes:ns,target:ms,played:new Set(),label,detail:label,prompt:'Intervall: '+label+' – spiele die Note(n)'};
+}
+
+function chordName(root,quality){return sharp[root%12]+(quality==='maj'?'-Dur':'-Moll')}
+function makeChordTask(){
+  let {lo,hi}=range(), candidates=[];
+  const qualities=[{q:'maj',semi:[0,4,7]},{q:'min',semi:[0,3,7]}];
+
+  for(let root=lo;root<=hi;root++){
+    if(!isWhite(root)||!accAllows(root))continue;
+    for(const q of qualities){
+      let ms=q.semi.map(s=>root+s);
+      if(ms.some(m=>m<21||m>108||m<lo||m>hi||!accAllows(m)))continue;
+      candidates.push({root,quality:q.q,ms});
+    }
+  }
+  if(!candidates.length)return null;
+  let c=candidates[Math.floor(Math.random()*candidates.length)];
+  let ns=c.ms.map(m=>({...byMidi(m),sp:spellingFor(m)}));
+  let style=ns[0].sp.style;
+  let label=chordName(c.root,c.quality);
+  return {kind:'chord',notes:ns,target:c.ms,played:new Set(),label,detail:label,prompt:'Akkord: '+label+' – spiele alle Töne'};
+}
+
+function nextTask(){
+  clearMarks(); $('result').textContent=''; $('result').className='result';
+  let type=$('exercise').value;
+  cur = type==='landmark'
+    ? makeLandmarkTask()
+    : type==='interval'
+      ? makeIntervalTask()
+      : type==='chord'
+        ? makeChordTask()
+        : makeSingleTask();
+  if(!cur){
+    $('result').textContent='Keine passende Aufgabe im Bereich. Bereich erweitern oder Vorzeichen ändern.';
+    $('result').className='result bad';
+    staff.innerHTML='';
+    return;
+  }
+  draw(cur);
+  updateName();
+}
+
+function updateName(){
+  if(!cur)return;
+  if(cur.kind==='note'){
+    $('name').textContent='Note: '+cur.label;
+  }else if(cur.kind==='landmark'){
+    $('name').textContent='Landmark: '+cur.label;
+  }else if(cur.kind==='interval'){
+    $('name').textContent='Intervall: '+cur.label;
+  }else{
+    $('name').textContent='Akkord: '+cur.label;
+  }
+  $('name').classList.toggle('hidden',!$('showName').checked);
+}
+
+function targetSet(){return new Set(cur.target)}
+function answer(m){
+  if(!cur)return;
+  clearMarks();
+  const targets=targetSet();
+  if(targets.has(m)){
+    if(!cur.played.has(m)){
+      cur.played.add(m);
+      keyMark(m,'hitok');
+    }
+    let missing=cur.target.filter(x=>!cur.played.has(x));
+    if(missing.length===0){
+      right++;
+      $('result').textContent='Richtig: '+cur.detail;
+      $('result').className='result ok';
+      stats();
+      setTimeout(nextTask,650);
+    }else{
+      $('result').textContent='Richtig, noch '+missing.length+' Ton/Töne.';
+      $('result').className='result ok';
+      stats();
+    }
+  }else{
+    wrong++;
+    keyMark(m,'hitbad');
+    $('result').textContent='Nicht ganz. Du hast '+nm(m)+' gespielt. Ziel: '+cur.detail;
+    $('result').className='result bad';
+    if($('showTarget').checked)showTargets();
+    stats();
+  }
+}
+
+function keyMark(m,cls){let el=kbd.querySelector(`[data-midi="${m}"]`);if(el){el.classList.add(cls);el.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});setTimeout(()=>el.classList.remove(cls),650)}}
+function showTargets(){cur.target.forEach(m=>{let el=kbd.querySelector(`[data-midi="${m}"]`);if(el)el.classList.add('target')})}
+function clearMarks(){[...kbd.children].forEach(e=>e.classList.remove('target','hitok','hitbad'))}
+function stats(){$('right').textContent=right;$('wrong').textContent=wrong;let t=right+wrong;$('rate').textContent=t?Math.round(right/t*100)+'%':'0%'}
+function reset(){right=0;wrong=0;stats();nextTask()}
+
+function midiSet(s,ok=false){$('midiStatus').textContent=s;$('midiStatus').style.color=ok?'var(--ok)':'var(--muted)'}
+function midiInputs(){if(!midi)return[];let arr=[];midi.inputs.forEach(i=>arr.push(i));return arr}
+function midiAttach(){let ins=midiInputs();ins.forEach(i=>i.onmidimessage=midiMsg);if(!ins.length){midiSet('MIDI verbunden, aber kein Eingabegerät gefunden. Piano einschalten/USB prüfen.');return}midiSet('MIDI aktiv: '+ins.map(i=>i.name||'MIDI Input').join(', '),true)}
+async function midiConnect(){if(!('requestMIDIAccess' in navigator)){midiSet('Web MIDI wird in diesem Browser nicht unterstützt. Bitte Chrome/Edge verwenden.');return}try{midi=await navigator.requestMIDIAccess({sysex:false});midiOn=true;midi.onstatechange=midiAttach;midiAttach()}catch(e){midiSet('MIDI konnte nicht aktiviert werden: '+(e&&e.message?e.message:'Zugriff verweigert oder unsicherer Kontext.'))}}
+function midiDisconnect(){midiOn=false;if(midi)midi.inputs.forEach(i=>i.onmidimessage=null);midiSet('MIDI aus.')}
+function midiMsg(ev){if(!midiOn)return;const [status,note,vel]=ev.data,cmd=status&0xF0,isNoteOn=cmd===0x90&&vel>0;if(!isNoteOn)return;if(note<21||note>108){midiSet('MIDI-Note außerhalb 88-Tasten-Bereich: '+note);return}answer(note)}
+
+function S(tag,a={}){let e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,v);return e}
+function drawStaffBase(mode,ty,by,g,x1,x2){
+  function lines(y){for(let i=0;i<5;i++)staff.appendChild(S('line',{x1,x2,y1:y+i*g,y2:y+i*g,stroke:'#222','stroke-width':1}))}
+  function txt(t,x,y,sz){let e=S('text',{x,y,'font-size':sz,'font-family':'Georgia,Times New Roman,serif',fill:'#111'});e.textContent=t;staff.appendChild(e)}
+  if(mode!=='bass'){lines(ty);txt('𝄞',74,ty+45,62)}
+  if(mode!=='treble'){lines(by);txt('𝄢',78,by+42,50)}
+  if(mode==='grand'){
+    staff.appendChild(S('path',{d:`M70 ${ty-8} C45 ${ty+14},45 ${ty+44},64 ${ty+60} C45 ${ty+78},45 ${by+42},70 ${by+62}`,fill:'none',stroke:'#111','stroke-width':2}));
+    staff.appendChild(S('line',{x1:x1-8,x2:x1-8,y1:ty,y2:by+g*4,stroke:'#111','stroke-width':1.4}));
+  }
+}
+
+function notePosition(n,mode,ty,by,g,forcedClef=null){
+  let useTreble;
+  if(forcedClef==='treble') useTreble=true;
+  else if(forcedClef==='bass') useTreble=false;
+  else {
+    useTreble=mode==='treble'||(mode==='grand'&&n.m>=60);
+    if(mode==='bass')useTreble=false;
+  }
+  let top=useTreble?ty:by;
+  let bottomIdx=useTreble?dia(64,'sharp'):dia(43,'sharp');
+  let y=top+g*4-(dia(n.m,n.sp.style)-bottomIdx)*g/2;
+  return {n,useTreble,top,y,x:400};
+}
+
+function forcedClefForTask(task,mode){
+  if(mode!=='grand'||task.kind==='note')return null;
+
+  let low=Math.min(...task.target), high=Math.max(...task.target), avg=task.target.reduce((s,m)=>s+m,0)/task.target.length;
+
+  // Standardmäßig Intervalle/Akkorde auf EINEM System notieren.
+  // Wir wählen das System, das die wenigsten Hilfslinien braucht.
+  function ledgerCostFor(clef){
+    return task.notes.reduce((sum,n)=>{
+      let top = clef==='treble' ? 58 : 178;
+      let bottomIdx = clef==='treble' ? dia(64,'sharp') : dia(43,'sharp'); // E4 / G2
+      let y = top + 12*4 - (dia(n.m,n.sp.style)-bottomIdx)*12/2;
+      if(y < top){
+        return sum + Math.ceil((top - y)/12);
+      }
+      if(y > top + 12*4){
+        return sum + Math.ceil((y - (top + 12*4))/12);
+      }
+      return sum;
+    },0);
+  }
+
+  let trebleCost = ledgerCostFor('treble');
+  let bassCost = ledgerCostFor('bass');
+
+  // Middle-C-Bereich leicht Richtung Violinschlüssel bevorzugen,
+  // wie man es oft in Lern-/Lead-Sheet-Notation sieht.
+  if(low >= 55 && high <= 64) return 'treble';
+
+  if(trebleCost < bassCost) return 'treble';
+  if(bassCost < trebleCost) return 'bass';
+
+  // Bei Gleichstand nach Lage entscheiden.
+  return avg >= 60 ? 'treble' : 'bass';
+}
+
+function drawLedger(x,y,top,g){
+  if(y<top){
+    for(let ly=top-g;ly>=y-1;ly-=g)staff.appendChild(S('line',{x1:x-12,x2:x+12,y1:ly,y2:ly,stroke:'#222','stroke-width':1.2}));
+  }
+  if(y>top+g*4){
+    for(let ly=top+g*5;ly<=y+1;ly+=g)staff.appendChild(S('line',{x1:x-12,x2:x+12,y1:ly,y2:ly,stroke:'#222','stroke-width':1.2}));
+  }
+}
+
+function draw(task){
+  staff.innerHTML='';
+  const x1=105,x2=690,g=12,ty=58,by=178;
+  let mode=$('clef').value;
+  drawStaffBase(mode,ty,by,g,x1,x2);
+
+  let forcedClef=forcedClefForTask(task,mode);
+  let positions=task.notes.map(n=>notePosition(n,mode,ty,by,g,forcedClef));
+
+  // Bei Sekunden oder sehr engen Lagen werden Notenköpfe leicht versetzt.
+  let groups={};
+  positions.forEach(p=>{let key=(p.useTreble?'t':'b');(groups[key]||(groups[key]=[])).push(p)});
+  Object.values(groups).forEach(group=>{
+    group.sort((a,b)=>a.y-b.y);
+    for(let i=1;i<group.length;i++){
+      if(Math.abs(group[i].y-group[i-1].y)<9) group[i].x += 13;
+    }
+  });
+
+  for(const p of positions){
+    drawLedger(p.x,p.y,p.top,g);
+    if(p.n.sp.acc){
+      let a=S('text',{x:p.x-50,y:p.y+8,'font-size':22,'font-family':'Georgia,serif',fill:'#111'});
+      a.textContent=p.n.sp.acc;staff.appendChild(a);
+    }
+  }
+
+  for(const p of positions){
+    staff.appendChild(S('ellipse',{cx:p.x,cy:p.y,rx:7,ry:4.6,transform:`rotate(-18 ${p.x} ${p.y})`,fill:'#111'}));
+  }
+
+  // Ein Notenhals pro Notengruppe.
+  Object.values(groups).forEach(group=>{
+    if(!group.length)return;
+    let avg=group.reduce((s,p)=>s+p.y,0)/group.length;
+    let top=group[0].top;
+    let minY=Math.min(...group.map(p=>p.y)), maxY=Math.max(...group.map(p=>p.y));
+    let minX=Math.min(...group.map(p=>p.x)), maxX=Math.max(...group.map(p=>p.x));
+    if(avg>top+g*2){
+      staff.appendChild(S('line',{x1:maxX+6,x2:maxX+6,y1:maxY,y2:minY-42,stroke:'#111','stroke-width':1.25}));
+    }else{
+      staff.appendChild(S('line',{x1:minX-6,x2:minX-6,y1:minY,y2:maxY+42,stroke:'#111','stroke-width':1.25}));
+    }
+  });
+
+  let p=S('text',{x:380,y:28,'text-anchor':'middle','font-size':17,fill:'#555'});
+  p.textContent=task.prompt;staff.appendChild(p);
+
+  let sub=S('text',{x:380,y:260,'text-anchor':'middle','font-size':13,fill:'#777'});
+  if(task.kind==='note'){
+    sub.textContent = positions[0].useTreble ? 'Violinschlüssel' : 'Bassschlüssel';
+  } else if(task.kind==='landmark'){
+    sub.textContent = task.label;
+  } else {
+    sub.textContent = task.label;
+  }
+  staff.appendChild(sub);
+}
+
+['exercise','clef','low','high','acc'].forEach(id=>$(id).onchange=nextTask);
+$('showName').onchange=updateName;
+$('next').onclick=nextTask;
+$('reset').onclick=reset;
+$('midiConnect').onclick=midiConnect;
+$('midiDisconnect').onclick=midiDisconnect;
+
+makeNotes();buildKeyboard();fillRanges();nextTask();
+</script>
+</body>
+</html>
